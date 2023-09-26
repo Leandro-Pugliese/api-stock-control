@@ -11,8 +11,10 @@ const createProducto = async(req, res) => {
         const producto = await Productos.create({
             sku: body.sku,
             stock: body.stock,
+            maquina: body.maquina,
             componentes: body.componentes,
-            categoria: body.categoria
+            categoria: body.categoria,
+            descripcion: body.descripcion
         });
 
         const msj = "Producto creado exitosamente."

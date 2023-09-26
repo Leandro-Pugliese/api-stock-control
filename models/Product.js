@@ -7,15 +7,16 @@ const productoSchema = new mongoose.Schema ({
         unique: true
     },
     stock: {
-        type: Number,
-        require: true
+        type: [Object],
+        required: true,
     },
+    maquina: String,
     componentes: {
         type: Object,
         required: true,
-        default: {}
     },
     categoria: String,
+    descripcion: String
 }, {versionKey: false});
 
 const Producto = mongoose.model("Producto", productoSchema);
