@@ -28,12 +28,11 @@ const createProducto = async(req, res) => {
 
 const updateProducto = async(req, res) => {
     const { body }= req
+    console.log(body)
     const producto = await Productos.updateOne({_id: body._id},
         {
             $set: {
-                stock: body.stock,
-                componentes: body.componentes,
-                categoria: body.categoria
+                stock: body.stock
             }
         }     
     );
@@ -42,7 +41,7 @@ const updateProducto = async(req, res) => {
 };
 
 const listaProductosAll = async(req, res) => {
-    const productos = Productos.find();
+    const productos = await Productos.find();
     res.status(200).send(productos);
 };
 
@@ -50,35 +49,126 @@ const listaProductosFiltrados = async(req, res) => {
     const { body } = req
     
     // Busqueda por Sku
-    if (body.sku !== "" && body.stock === "" && body.componentes === "" && body.categoria === "") {
-        const productoFiltradoSku = Productos.findOne({sku: body.sku});
+    if (body.sku !== "" && body.stock === "" && body.categoria === "") {
+        const productoFiltradoSku = await Productos.findOne({sku: body.sku});
         res.status(200).send(productoFiltradoSku);
     };
     
-    // Busqueda por stock
-    if (body.stock !== "" && body.sku === "" && body.componentes === "" && body.categoria === "") {
-        const productos = Productos.find();
-        if (body.stock === 0) {
-            const filtroProductosStockNegativo = productos.filter(producto => producto.stock === body.stock);
-            res.status(200).send(filtroProductosStockNegativo);
-        } else {
-            const filtroProductosStockPositivo = productos.filter(producto => producto.stock === body.stock);
-            res.status(200).send(filtroProductosStockPositivo);
+    // Busqueda por stock especifico
+    if (body.stock !== "" && body.stockEspecifico === "SI" && body.sku === "" && body.categoria === "") {
+        const productos = await Productos.find();
+        const filtro = []
+        productos.forEach(element =>  filtro.push(element.sku, element.stock.filter(data => data.Unidades === body.stock)))
+
+        const dividirArrayEnPares = (array) => {
+            const subArrays = [];
+            for (let i = 0; i < array.length; i += 2) {
+            subArrays.push(array.slice(i, i + 2));
+            }
+            return subArrays;
         }
+            
+        const arrayDividido = dividirArrayEnPares(filtro); 
+        const filtro2 = []
+            
+        arrayDividido.forEach(element => {
+            if(element[1][0] !== undefined) {
+                filtro2.push(element[0], element[1])
+            }
+        })
+            
+        const arrayFinal = dividirArrayEnPares(filtro2)
+        res.status(200).send(arrayFinal)
     };
 
-    // Busqueda por componentes
-    if (body.componentes !== "" && body.sku === "" && body.stock === "" && body.categoria === "") {
-        const productos = Productos.find();
-        const filtroProductosComponentes = productos.filter(producto => producto.componentes === body.componentes);
-        res.status(200).send(filtroProductosComponentes);
+    // Busqueda por stock disponible
+    if (body.stockEspecifico === "NO" && body.sku === "" && body.categoria === "") {
+        const productos = await Productos.find();
+        const filtro = []
+        productos.forEach(element =>  filtro.push(element.sku, element.stock.filter(data => data.Unidades > 0)))
+
+        const dividirArrayEnPares = (array) => {
+            const subArrays = [];
+            for (let i = 0; i < array.length; i += 2) {
+            subArrays.push(array.slice(i, i + 2));
+            }
+            return subArrays;
+        }
+            
+        const arrayDividido = dividirArrayEnPares(filtro); 
+        const filtro2 = []
+            
+        arrayDividido.forEach(element => {
+            if(element[1][0] !== undefined) {
+                filtro2.push(element[0], element[1])
+            }
+        })
+            
+        const arrayFinal = dividirArrayEnPares(filtro2)
+        res.status(200).send(arrayFinal)
     };
 
-    // Busqueda por categoria
-    if (body.categoria !== "" && body.sku === "" && body.stock === "" &&  body.componentes === "") {
-        const productos = Productos.find();
+    // Busqueda por categoría
+    if (body.categoria !== "" && body.sku === "" && body.stock === "" && body.stockEspecifico === "ND") {
+        const productos = await Productos.find();
         const filtroProductosCategoria = productos.filter(producto => producto.categoria === body.categoria);
         res.status(201).send(filtroProductosCategoria);
+    }
+
+    // Busqueda por categoría y stock especifico
+    if (body.categoria !== "" && body.sku === "" && body.stock !== "" && body.stockEspecifico === "SI") {
+        const productos = await Productos.find();
+        const filtro = []
+        const filtroProductosCategoria = productos.filter(producto => producto.categoria === body.categoria);
+        filtroProductosCategoria.forEach(element =>  filtro.push(element.sku, element.stock.filter(data => data.Unidades === body.stock)))
+
+        const dividirArrayEnPares = (array) => {
+            const subArrays = [];
+            for (let i = 0; i < array.length; i += 2) {
+              subArrays.push(array.slice(i, i + 2));
+            }
+            return subArrays;
+        }
+          
+        const arrayDividido = dividirArrayEnPares(filtro); 
+        const filtro2 = []
+        
+        arrayDividido.forEach(element => {
+            if(element[1][0] !== undefined) {
+                filtro2.push(element[0], element[1])
+            }
+        })
+        
+        const arrayFinal = dividirArrayEnPares(filtro2)
+        res.status(200).send(arrayFinal) 
+    }
+
+    // Busqueda por categoría y stock disponible
+    if (body.categoria !== "" && body.sku === "" && body.stockEspecifico === "NO") {
+        const productos = await Productos.find();
+        const filtro = []
+        const filtroProductosCategoria = productos.filter(producto => producto.categoria === body.categoria);
+        filtroProductosCategoria.forEach(element =>  filtro.push(element.sku, element.stock.filter(data => data.Unidades > 0)))
+
+        const dividirArrayEnPares = (array) => {
+            const subArrays = [];
+            for (let i = 0; i < array.length; i += 2) {
+              subArrays.push(array.slice(i, i + 2));
+            }
+            return subArrays;
+        }
+          
+        const arrayDividido = dividirArrayEnPares(filtro); 
+        const filtro2 = []
+        
+        arrayDividido.forEach(element => {
+            if(element[1][0] !== undefined) {
+                filtro2.push(element[0], element[1])
+            }
+        })
+        
+        const arrayFinal = dividirArrayEnPares(filtro2)
+        res.status(200).send(arrayFinal) 
     }
 };
 
