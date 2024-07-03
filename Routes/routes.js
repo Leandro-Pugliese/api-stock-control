@@ -1,6 +1,7 @@
 const express = require("express");
 const router =  express.Router();
-const {createUser, loginUser, updateUser, usersList, isAuthenticated} = require("../controllers/user.controller");
+const {isAuthenticated} = require("../Authentication/authentication");
+const {createUser, loginUser, updateUser, usersList} = require("../controllers/user.controller");
 const {createProducto, updateProducto, listaProductosAll, listaProductosFiltrados} = require("../controllers/producto.controller");
 const {createInsumo, updateInsumo, listaInsumos} = require("../controllers/insumo.controller");
 

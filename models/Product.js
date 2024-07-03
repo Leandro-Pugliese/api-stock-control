@@ -7,12 +7,12 @@ const productoSchema = new mongoose.Schema ({
         unique: true
     },
     stock: {
-        type: [Object],
+        type: [],
         required: true,
     },
     maquina: String,
     componentes: {
-        type: Object,
+        type: [],
         required: true,
     },
     categoria: String,
