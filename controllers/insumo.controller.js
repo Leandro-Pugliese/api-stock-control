@@ -4,10 +4,11 @@ const Insumos = require("../models/Insumo");
 const createInsumo = async(req, res) => {
     const { body } = req
     try {
-        const checkInsumo = await Insumos.findOne({nombre: body.nombre});
+        const nombreEnMayusculas = body.nombre.toUpperCase()
+        const checkInsumo = await Insumos.findOne({nombre: nombreEnMayusculas});
         if (checkInsumo) return res.status(403).send("¡Insumo existente!");
         const insumo = await Insumos.create({
-            nombre: body.nombre,
+            nombre: nombreEnMayusculas,
             precio: body.precio,
             descripcion: body.descripcion
         });

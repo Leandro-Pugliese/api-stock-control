@@ -56,14 +56,22 @@ const loginUser = async (req, res) => {
 };
 
 const updateUser = async (req, res) => {
-    const { body } = req
+    const { body } = req; //email, passwordActual, nuevaPassword
     try {
-        const { email } = jwt.decode(body.token, {complete: true}).payload;
-        const userFind = await Users.findOne({email: body.email});
-        if (email !== body.email || !userFind) return res.status(403).send("Correo inválido.");
+        const token = req.header("Authorization");
+        if (!token) {
+            return res.status(403).send('No se detecto un token en la petición.')
+        }
+        const { email } = jwt.decode(token, {complete: true}).payload;
+        const user = await Users.findOne({email: body.email});
+        if (email !== body.email || !user) return res.status(403).send("Correo inválido.");
+        const isMatch = await bcrypt.compare(body.passwordActual, user.password);
+        if (!isMatch) {
+            return res.status(403).send("Contraseña actual inválida.");
+        }
         const salt = await bcrypt.genSalt();
-        const hashed = await bcrypt.hash(body.password, salt);
-        const user = await Users.updateOne({email: body.email}, 
+        const hashed = await bcrypt.hash(body.nuevaPassword, salt);
+        await Users.updateOne({email: email}, 
             {
                 $set: {
                     password: hashed, salt
@@ -72,7 +80,6 @@ const updateUser = async (req, res) => {
         )
         res.status(201).send("La contraseña ha sido modificada exitosamente.");
     } catch (error) {
-        console.log(error);
         res.status(500).send(error.message);
     }
 }
@@ -85,6 +92,5 @@ const usersList = async (req, res) => {
         res.status(500).send(error.message);
     }
 }
-
 
 module.exports = { createUser, loginUser, updateUser, usersList };
