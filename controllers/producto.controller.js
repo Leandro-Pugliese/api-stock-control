@@ -17,9 +17,9 @@ const createProducto = async(req, res) => {
             descripcion: body.descripcion
         });
         const msj = "Producto creado exitosamente."
-        res.status(201).send({producto, msj});
+        return res.status(201).send({producto, msj});
     } catch (error) {
-        res.status(500).send(error.message);
+        return res.status(500).send(error.message);
     }
 };
 
@@ -58,9 +58,9 @@ const updateProductoStock = async(req, res) => {
                 }
             }     
         );
-        res.status(200).send("Producto modificado exitosamente.");
+        return res.status(200).send("Producto modificado exitosamente.");
     } catch (error) {
-        res.status(500).send(error.message);
+        return res.status(500).send(error.message);
     }
 };
 
@@ -78,18 +78,18 @@ const updateProductoComponentes = async(req, res) => {
                 }
             }
         );
-        res.status(201).send("Componentes del producto modificados exitosamente.");
+        return res.status(201).send("Componentes del producto modificados exitosamente.");
     } catch (error) {
-        res.status(500).send(error.message);
+        return res.status(500).send(error.message);
     }
 }
 
 const listaProductosAll = async(req, res) => {
     try {
         const productos = await Productos.find();
-        res.status(200).send(productos);
+        return res.status(200).send(productos);
     } catch (error) {
-        res.status(500).send(error.message);
+        return res.status(500).send(error.message);
     }
 };
 

@@ -1,16 +1,23 @@
 const express = require("express");
 const router =  express.Router();
-const {isAuthenticated} = require("../Authentication/authentication");
-const {createUser, loginUser, updateUser, usersList} = require("../controllers/user.controller");
+const {isAuthenticated, isAuthenticatedAdmin} = require("../Authentication/authentication");
+const {createAdmin, loginAdmin, habilitarUsuario, updateAdmin, usersList} = require("../controllers/admin.controller");
+const {createUser, loginUser, updateUser} = require("../controllers/user.controller");
 const {createProducto, updateProductoStock, updateProductoComponentes, listaProductosAll} = require("../controllers/producto.controller");
 const {createInsumo, updateInsumo, listaInsumos} = require("../controllers/insumo.controller");
 
+
+// Rutas Admin.
+router.post("/admin/crear", createAdmin);
+router.post("/admin/login", loginAdmin);
+router.put("/admin/habilitar-usuario", isAuthenticatedAdmin, habilitarUsuario);
+router.put("/admin/update", isAuthenticatedAdmin, updateAdmin);
+router.get("/usuarios", isAuthenticatedAdmin, usersList);
 
 // Rutas Usuario.
 router.post("/usuario/crear", createUser);
 router.post("/usuario/login", loginUser);
 router.put("/usuario/update", isAuthenticated, updateUser);
-router.get("/usuarios", isAuthenticated, usersList);
 
 // Rutas Productos.
 router.post("/producto/crear", isAuthenticated, createProducto);
