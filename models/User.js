@@ -14,6 +14,10 @@ const userSchema = new mongoose.Schema({
         type: String,
         require: true
     },
+    bloqueado: {
+        type: Boolean,
+        require: true
+    },
     password: {
         type: String,
         require: true

@@ -1,7 +1,7 @@
 const express = require("express");
 const router =  express.Router();
 const {isAuthenticated, isAuthenticatedAdmin} = require("../Authentication/authentication");
-const {createAdmin, loginAdmin, habilitarUsuario, updateAdmin, usersList} = require("../controllers/admin.controller");
+const {createAdmin, loginAdmin, habilitarUsuario, quitarUsuarioHabilitado, updateAdmin, usersList, bloquearUsuario, borrarUsuario} = require("../controllers/admin.controller");
 const {createUser, loginUser, updateUser} = require("../controllers/user.controller");
 const {createProducto, updateProductoStock, updateProductoComponentes, listaProductosAll} = require("../controllers/producto.controller");
 const {createInsumo, updateInsumo, listaInsumos} = require("../controllers/insumo.controller");
@@ -11,7 +11,10 @@ const {createInsumo, updateInsumo, listaInsumos} = require("../controllers/insum
 router.post("/admin/crear", createAdmin);
 router.post("/admin/login", loginAdmin);
 router.put("/admin/habilitar-usuario", isAuthenticatedAdmin, habilitarUsuario);
+router.put("/admin/deshabilitar-usuario", isAuthenticatedAdmin, quitarUsuarioHabilitado);
 router.put("/admin/update", isAuthenticatedAdmin, updateAdmin);
+router.put("/admin/bloquear-usuario", isAuthenticatedAdmin, bloquearUsuario);
+router.post("/admin/borrar-usuario", isAuthenticatedAdmin, borrarUsuario);
 router.get("/usuarios", isAuthenticatedAdmin, usersList);
 
 // Rutas Usuario.

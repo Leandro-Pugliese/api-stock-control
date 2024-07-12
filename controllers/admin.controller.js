@@ -85,7 +85,8 @@ const habilitarUsuario = async (req, res) => {
         //Armo el obj usuario que va a habilitar el adm.
         const nombreEnMayusculas = body.usuarioNombre.toUpperCase();
         const emailEnMinusculas = body.usuarioEmail.toLowerCase();
-        //Verificamos si algún usuario ya esta registrado con ese email ya que el email es único.
+        //Verificamos si algún usuario ya esta registrado con ese email ya que el email es único. 
+        //Posible mejora, el email podria ser único dentro de la empresa en caso de que haya un grupo poder tener dos usuarios en empresas distintas con el mismo email en la misa BD.
         const emailMatch = await Users.findOne({email: emailEnMinusculas});
         if (emailMatch) {
             return res.status(403).send("Ya existe un usuario en la base de datos con el email ingresado.");
@@ -107,6 +108,9 @@ const habilitarUsuario = async (req, res) => {
         if (filtroClaveAccesoEnAdmin.length >= 1) {
             return res.status(403).send("Ya tienes habilitado un usuario con la clave de acceso ingresada.");
         }
+        // Hasheamos la clave de acceso. (Seguridad extra, no es necesaria por ahora.)
+        // const salt = await bcrypt.genSalt();
+        // const hashedClave = await bcrypt.hash(body.claveAcceso, salt);
         const objetoUsuario = {
             username: nombreEnMayusculas,
             email: emailEnMinusculas,
@@ -123,6 +127,47 @@ const habilitarUsuario = async (req, res) => {
         );
         const msj = "Usuario habilitado exitosamente."
         return res.status(200).send({msj, objetoUsuario});
+    } catch (error) {
+        return res.status(500).send(error.message);
+    }
+}
+
+const quitarUsuarioHabilitado = async (req, res) => {
+    const {body} = req; //usuarioEmail, pin
+    try {
+        //Primero que todo verificamos si el usuario fue creado o no.
+        const emailEnMinusculas = body.usuarioEmail.toLowerCase();
+        const user = await Users.findOne({email: emailEnMinusculas});
+        if (user) {
+            return res.status(403).send('El usuario ya fue creado, en caso de que quieras quitarlo de la lista de usuarios habilitados tienes que borrarlo primero.');
+        }
+        const tokenAdmin = req.header("Authorization");
+        if (!tokenAdmin) {
+            return res.status(403).send('No se detecto un token en la petición.');
+        }
+        const { _id } = jwt.decode(tokenAdmin, {complete: true}).payload;
+        const admin = await Admins.findOne({_id: _id});
+        if (!admin) {
+            return res.status(403).send("Administrador no encontrado en la base de datos.");
+        }
+        const pinMatch = await bcrypt.compare(body.pin, admin.pin);
+        if (!pinMatch) {
+            return res.status(403).send("Pin incorrecto.");
+        }
+        const filtroUsuario = admin.usuariosHabilitados.filter((usuario) => usuario.email === emailEnMinusculas);
+        if (filtroUsuario.length === 0 || filtroUsuario.length >= 2) {
+            return res.status(403).send("Error con filtrado de usuario habilitado.");
+        }
+        // Quitamos el usuario y hacemos update de la nueva lista filtrada.
+        const listaUsuariosFiltrada = admin.usuariosHabilitados.filter((usuario) => usuario.email !== emailEnMinusculas);
+        await Admins.updateOne({_id: _id},
+            {
+                $set: {
+                    usuariosHabilitados: listaUsuariosFiltrada
+                }
+            }
+        );
+        return res.status(200).send("Usuario deshabilitado exitosamente.");
     } catch (error) {
         return res.status(500).send(error.message);
     }
@@ -179,4 +224,87 @@ const usersList = async (req, res) => {
     }
 }
 
-module.exports = { createAdmin, loginAdmin, habilitarUsuario, updateAdmin, usersList };
+const bloquearUsuario = async (req, res) => {
+    const {body} = req; //usuarioID, bloqueo(true/false), pin
+    try {
+        const tokenAdmin = req.header("Authorization");
+        if (!tokenAdmin) {
+            return res.status(403).send('No se detecto un token en la petición.');
+        }
+        const { _id } = jwt.decode(tokenAdmin, {complete: true}).payload;
+        const admin = await Admins.findOne({_id: _id});
+        if (!admin) {
+            return res.status(403).send('Administrador no encontrado en la base de datos.');
+        }
+        const pinMatch = await bcrypt.compare(body.pin, admin.pin);
+        if (!pinMatch) {
+            return res.status(403).send("Pin inválido.");
+        }
+        const user = await Users.findOne({_id: body.usuarioID});
+        if (!user) {
+            return res.status(403).send('Usuario no encontrado en la base de datos.');
+        }
+        if (admin._id.toString() !== user.admin) {
+            return res.status(403).send('Solo puedes bloquear/desbloquear usuarios que hayas habilitado con este usuario administrador.');
+        }
+        if (body.bloqueo !== true) {
+            if (body.bloqueo !== false) {
+                return res.status(403).send('Error: tipo de bloqueo indefinido.');
+            }
+        }
+        let estadoUsuario = "bloqueado"
+        if (body.bloqueo === false) {
+            estadoUsuario = "desbloqueado"
+        }
+        if (body.bloqueo === user.bloqueado) {
+            return res.status(403).send(`El usuario ya se encuentra ${estadoUsuario}`);
+        }
+        const msj = `Usuario (${user.username}) ${estadoUsuario}`;
+        await Users.updateOne({_id: user._id},
+            {
+                $set: {
+                    bloqueado: body.bloqueo
+                }
+            }
+        );
+        return res.status(201).send(msj);
+    } catch (error) {
+        return res.status(500).send(error.message);
+    }
+}
+
+const borrarUsuario = async (req, res) => {
+    const {body} = req; //usuarioID, passwordAdmin, pin
+    try {
+        const tokenAdmin = req.header("Authorization");
+        if (!tokenAdmin) {
+            return res.status(403).send('No se detecto un token en la petición.')
+        }
+        const { _id } = jwt.decode(tokenAdmin, {complete: true}).payload;
+        const admin = await Admins.findOne({_id: _id});
+        if (!admin) {
+            return res.status(403).send('Administrador no encontrado en la base de datos.');
+        }
+        const pinMatch = await bcrypt.compare(body.pin, admin.pin);
+        if (!pinMatch) {
+            return res.status(403).send("Pin inválido.");
+        }
+        const passwordMatch = await bcrypt.compare(body.passwordAdmin, admin.password);
+        if (!passwordMatch) {
+            return res.status(403).send("Contraseña inválida.");
+        }
+        const user = await Users.findOne({_id: body.usuarioID});
+        if (!user) {
+            return res.status(403).send('Usuario no encontrado en la base de datos.');
+        }
+        if (admin._id.toString() !== user.admin) {
+            return res.status(403).send('Solo puedes borrar usuarios que hayas habilitado con este usuario administrador.');
+        }
+        await Users.deleteOne({ _id: user._id });
+        return res.status(200).send(`Usuario (${user.username}) eliminado exitosamente.`);
+    } catch (error) {
+        return res.status(500).send(error.message);
+    }
+}
+
+module.exports = { createAdmin, loginAdmin, habilitarUsuario, quitarUsuarioHabilitado, updateAdmin, usersList, bloquearUsuario, borrarUsuario };

@@ -42,6 +42,7 @@ const createUser = async (req, res) => {
             username: nombreEnMayusculas,
             email: emailEnMinusculas,
             admin: admin._id,
+            bloqueado: false,
             password: hashed, salt
         });
         const msj = "Usuario creado exitosamente.";
@@ -58,15 +59,16 @@ const loginUser = async (req, res) => {
         const user = await Users.findOne({email: emailEnMinusculas});
         if (!user) {
             return res.status(403).send("El email y/o la contraseña son incorrectos.");
-        } else {
-            const isMatch = await bcrypt.compare(body.password, user.password);
-            if (isMatch) {
-                const token = signToken(user._id, user.email);
-                return res.status(200).send({token, user});
-            } else {
-                return res.status(403).send("El email y/o la contraseña son incorrectos.");
-            }
+        } 
+        if (user.bloqueado === true) {
+            return res.status(403).send("El usuario se encuentra bloqueado.");
         }
+        const isMatch = await bcrypt.compare(body.password, user.password);
+        if (!isMatch) {
+            return res.status(403).send("El email y/o la contraseña son incorrectos.");
+        } 
+        const token = signToken(user._id, user.email);
+        return res.status(200).send({ token, user });
     } catch (error) {
         return res.status(500).send(error.message);
     }
