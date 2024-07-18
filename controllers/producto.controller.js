@@ -3,7 +3,7 @@ const Productos = require("../models/Product");
 
 
 const createProducto = async(req, res) => {
-    const { body } = req;
+    const { body } = req; //Sku, stock[{obj}], componentes[{obj}], categoria, descripcion
     try {
         const skuEnMayusculas = body.sku.toUpperCase();
         const checkSku = await Productos.findOne({sku: skuEnMayusculas});
@@ -11,7 +11,6 @@ const createProducto = async(req, res) => {
         const producto = await Productos.create({
             sku: skuEnMayusculas,
             stock: body.stock,
-            maquina: body.maquina,
             componentes: body.componentes,
             categoria: body.categoria,
             descripcion: body.descripcion
@@ -23,38 +22,72 @@ const createProducto = async(req, res) => {
     }
 };
 
-const updateProductoStock = async(req, res) => {
-    const { body } = req //OPERACION("ADD"/"REMOVE"), CANTIDAD(Number)
+const updateProductoStock = async(req, res) => { //Sirve tanto para modificar cantidades de stock como para agregar colores nuevos.
+    const { body } = req //sku, operacion("ADD"/"REMOVE"), color(string), cantidad(Number)
     try {
-        const producto = await Productos.findOne({_id: body._id});
+        const skuEnMayusculas = body.sku.toUpperCase();
+        const producto = await Productos.findOne({sku: skuEnMayusculas});
         if (!producto) {
             return res.status(403).send("Producto no encontrado en la base de datos.");
         }
-        let objetoModificado = [];
+        let productoStock = [...producto.stock];
+        // Filtramos por el color.
+        const filtroPorColor = productoStock.filter((elemento) => elemento.color === body.color);
         if (body.operacion === "ADD") {
-            const nuevoObjetoStock = {
-                color: producto.stock.color,
-                unidades: producto.stock.unidades + body.cantidad
-            }
-            objetoModificado.push(nuevoObjetoStock);
-        } else if (body.operacion === "REMOVE") {
-            const resta = producto.stock.unidades - body.cantidad;
-            if (resta >= 0) { //Chequeamos que no quede en negativo el stock.
+            // Buscamos si el color existe en el stock del o hay que añadirlo.
+            if (filtroPorColor.length === 0) { // Si no existe el color en el stock, creamos el obj nuevo y lo añadimos.
                 const nuevoObjetoStock = {
-                    color: producto.stock.color,
-                    unidades: producto.stock.unidades - body.cantidad
+                    color: body.color,
+                    unidades: body.cantidad
                 }
-                objetoModificado.push(nuevoObjetoStock);
+                productoStock.push(nuevoObjetoStock);
+            } else if (filtroPorColor.length === 1) { // Si existe, modificamos solo la cantidad.
+                const objetoStockModificado = {
+                    color: filtroPorColor[0].color,
+                    unidades: filtroPorColor[0].unidades + body.cantidad
+                }
+                for (let indice in productoStock){
+                    let objOriginal = productoStock[indice];
+                    if (objOriginal.color === objetoStockModificado.color) {
+                        productoStock.splice(indice, 1, objetoStockModificado);
+                    }
+                }
             } else {
-                return res.status(403).send("No tienes la cantidad necesaria del producto para realizar la operación.");
+                return res.status(403).send("Error en el filtrado de color del producto.");
+            }
+        } else if (body.operacion === "REMOVE") {
+            // Buscamos el si el color existe o no.
+            if (filtroPorColor.length === 0) { // Si no existe no puedo modificarlo por ende error.
+                return res.status(403).send("Error: no se encontró el color indicado en el stock del producto.");
+            }
+            else if (filtroPorColor.length === 1) { //Si existe (si queda en 0 lo dejamos cargado igual no eliminamos el color de la base de datos).
+                // Revisamos que no quede negativo el stock y modificamos cantidades.
+                const resta = filtroPorColor[0].unidades - body.cantidad;
+                if (resta >= 0) {
+                    const objetoStockModificado = {
+                        color: filtroPorColor[0].color,
+                        unidades: resta
+                    }
+                    for (let indice in productoStock){
+                        let objOriginal = productoStock[indice];
+                        if (objOriginal.color === objetoStockModificado.color) {
+                            productoStock.splice(indice, 1, objetoStockModificado);
+                        }
+                    }
+                } else {
+                    return res.status(403).send("No tienes la cantidad necesaria del producto para realizar la operación.");
+                }
+            } else {
+                return res.status(403).send("Error en el filtrado de color del producto.");
             }
         } else {
             return res.status(403).send("El tipo de operación no esta definido correctamente.");
         }
-        await Productos.updateOne({_id: body._id},
+        // Hacemos el update del producto con la lista de productoStock actualizada.
+        await Productos.updateOne({sku: skuEnMayusculas},
             {
                 $set: {
-                    stock: objetoModificado[0]
+                    stock: productoStock
                 }
             }     
         );
@@ -65,20 +98,80 @@ const updateProductoStock = async(req, res) => {
 };
 
 const updateProductoComponentes = async(req, res) => {
-    const {body} = req; //_id(del producto), componentes(obj)
+    const {body} = req; //sku, operacion("ADD"/"REMOVE"), insumo(String), Cantidad(Number)
     try {
-        const producto = await Productos.findOne({_id: body._id});
+        const skuEnMayusculas = body.sku.toUpperCase();
+        const producto = await Productos.findOne({sku: skuEnMayusculas});
         if (!producto) {
             return res.status(403).send("Producto no encontrado en la base de datos.");
         }
-        await Productos.updateOne({},
+        let componentesProducto = [...producto.componentes];
+        // Filtramos por componente.
+        const filtroPorComponente = componentesProducto.filter((elemento) => elemento.insumo === body.insumo);
+        if (body.operacion === "ADD") {
+            // Buscamos si el componente existe o hay que añadirlo.
+            if (filtroPorComponente.length === 0) { // Si no existe el componente, creamos el obj nuevo y lo añadimos.
+                const nuevoObjetoComponente = {
+                    insumo: body.insumo,
+                    cantidad: body.cantidad
+                }
+                componentesProducto.push(nuevoObjetoComponente);
+            } else if (filtroPorComponente.length === 1) { // Si existe, modificamos solo la cantidad.
+                const objetoComponenteModificado = {
+                    insumo: filtroPorComponente[0].insumo,
+                    cantidad: filtroPorComponente[0].cantidad + body.cantidad
+                }
+                for (let indice in componentesProducto){
+                    let objOriginal = componentesProducto[indice];
+                    if (objOriginal.insumo === objetoComponenteModificado.insumo) {
+                        componentesProducto.splice(indice, 1, objetoComponenteModificado);
+                    }
+                }
+            } else {
+                return res.status(403).send("Error en el filtrado de componente del producto.");
+            }
+        } else if (body.operacion === "REMOVE") {
+            // Buscamos el si el componente existe o no.
+            if (filtroPorComponente.length === 0) { // Si no existe no puedo modificarlo por ende error.
+                return res.status(403).send("Error: no se encontró el insumo indicado en los componentes del producto.");
+            }
+            else if (filtroPorComponente.length === 1) { //Si existe.
+                // Revisamos que no quede negativo el stock y modificamos cantidades.
+                const resta = filtroPorComponente[0].cantidad - body.cantidad;
+                if (resta >= 1) {
+                    const objetoComponenteModificado = {
+                        insumo: filtroPorComponente[0].insumo,
+                        cantidad: resta
+                    }
+                    for (let indice in componentesProducto){
+                        let objOriginal = componentesProducto[indice];
+                        if (objOriginal.insumo === objetoComponenteModificado.insumo) {
+                            componentesProducto.splice(indice, 1, objetoComponenteModificado);
+                        }
+                    }
+                } else { //En este caso solo quitamos el componente del array de componentes.
+                    for (let indice in componentesProducto){
+                        let objOriginal = componentesProducto[indice];
+                        if (objOriginal.insumo === body.insumo) {
+                            componentesProducto.splice(indice, 1);
+                        }
+                    }
+                }
+            } else {
+                return res.status(403).send("Error en el filtrado de componente del producto.");
+            }
+        } else {
+            return res.status(403).send("El tipo de operación no esta definido correctamente.");
+        }
+        // Hacemos el update del producto con la lista de componentes actualizada.
+        await Productos.updateOne({sku: skuEnMayusculas},
             {
                 $set: {
-                    componentes: body.componentes
+                    componentes: componentesProducto
                 }
             }
         );
-        return res.status(201).send("Componentes del producto modificados exitosamente.");
+        return res.status(201).send("Componente del producto modificado exitosamente.");
     } catch (error) {
         return res.status(500).send(error.message);
     }

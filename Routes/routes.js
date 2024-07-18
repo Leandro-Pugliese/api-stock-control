@@ -16,22 +16,28 @@ router.put("/admin/update", isAuthenticatedAdmin, updateAdmin);
 router.put("/admin/bloquear-usuario", isAuthenticatedAdmin, bloquearUsuario);
 router.post("/admin/borrar-usuario", isAuthenticatedAdmin, borrarUsuario);
 router.get("/usuarios", isAuthenticatedAdmin, usersList);
-
 // Rutas Usuario.
 router.post("/usuario/crear", createUser);
 router.post("/usuario/login", loginUser);
 router.put("/usuario/update", isAuthenticated, updateUser);
-
-// Rutas Productos.
+// Rutas Productos.(Usuario)
 router.post("/producto/crear", isAuthenticated, createProducto);
 router.put("/producto/update-stock", isAuthenticated, updateProductoStock);
 router.put("/producto/update-componentes", isAuthenticated, updateProductoComponentes);
 router.get("/productos", isAuthenticated, listaProductosAll);
-
-// Rutas Insumos.
+// Rutas Productos.(Admin)
+router.post("/producto/crear-admin", isAuthenticatedAdmin, createProducto);
+router.put("/producto/update-stock-admin", isAuthenticatedAdmin, updateProductoStock);
+router.put("/producto/update-componentes-admin", isAuthenticatedAdmin, updateProductoComponentes);
+router.get("/productos-admin", isAuthenticatedAdmin, listaProductosAll);
+// Rutas Insumos.(Usuario)
 router.post("/insumo/crear", isAuthenticated, createInsumo);
 router.put("/insumo/update", isAuthenticated, updateInsumo);
 router.get("/insumos", isAuthenticated ,listaInsumos);
+// Rutas Insumos.(Admin)
+router.post("/insumo/crear-admin", isAuthenticatedAdmin, createInsumo);
+router.put("/insumo/update-admin", isAuthenticatedAdmin, updateInsumo);
+router.get("/insumos-admin", isAuthenticatedAdmin ,listaInsumos);
 
 module.exports = router
 

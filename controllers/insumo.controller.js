@@ -2,7 +2,7 @@ const express = require("express");
 const Insumos = require("../models/Insumo");
 
 const createInsumo = async(req, res) => {
-    const { body } = req
+    const { body } = req; //nombre, precio, descripcion
     try {
         const nombreEnMayusculas = body.nombre.toUpperCase()
         const checkInsumo = await Insumos.findOne({nombre: nombreEnMayusculas});
@@ -13,16 +13,19 @@ const createInsumo = async(req, res) => {
             descripcion: body.descripcion
         });
         const msj = "Insumo cargado exitosamente."
-        res.status(201).send({insumo, msj});
+        return res.status(201).send({insumo, msj});
     } catch (error) {
-        console.log(error);
-        res.status(500).send(error.message);
+        return res.status(500).send(error.message);
     }
 };
 
 const updateInsumo = async(req, res) => {
-    const { body } = req
+    const { body } = req; //_id, precio, descripcion.
     try {
+        const checkInsumo = await Insumos.findOne({_id: body._id});
+        if (!checkInsumo) {
+            return res.status(403).send("¡Insumo no encontrado en la base de datos!")
+        };
         await Insumos.updateOne({_id: body._id},
             {
                 $set: {
@@ -31,18 +34,18 @@ const updateInsumo = async(req, res) => {
                 }
             }     
         );
-        res.status(200).send("Insumo modificado exitosamente.");
+        return res.status(200).send("Insumo modificado exitosamente.");
     } catch (error) {
-        res.status(500).send(error.message);
+        return res.status(500).send(error.message);
     }
 };
 
 const listaInsumos = async(req, res) => {
     try {
         const insumos = await Insumos.find();
-        res.status(200).send(insumos);
+        return res.status(200).send(insumos);
     } catch (error) {
-        res.status(500).send(error.message);
+        return res.status(500).send(error.message);
     }
 };
 

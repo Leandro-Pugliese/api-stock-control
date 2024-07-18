@@ -10,7 +10,6 @@ const productoSchema = new mongoose.Schema ({
         type: [],
         required: true,
     },
-    maquina: String,
     componentes: {
         type: [],
         required: true,
