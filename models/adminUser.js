@@ -1,7 +1,12 @@
 const mongoose = require("mongoose");
 
-const userSchema = new mongoose.Schema({
+const adminSchema = new mongoose.Schema({
     username: {
+        type: String,
+        require: true,
+        unique: true
+    },
+    empresa: {
         type: String,
         require: true,
     },
@@ -10,12 +15,12 @@ const userSchema = new mongoose.Schema({
         require: true,
         unique: true
     },
-    admin: {
-        type: String,
+    usuariosHabilitados: {
+        type: [],
         require: true
     },
-    bloqueado: {
-        type: Boolean,
+    pin : {
+        type: String,
         require: true
     },
     password: {
@@ -28,6 +33,6 @@ const userSchema = new mongoose.Schema({
     }
 }, {versionKey: false});
 
-const User = mongoose.model("User", userSchema);
+const Admin = mongoose.model("Admin", adminSchema);
 
-module.exports = User
+module.exports = Admin

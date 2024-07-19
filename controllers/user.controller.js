@@ -1,114 +1,107 @@
 const express = require("express");
+const Admins = require("../models/adminUser");
 const Users = require("../models/User");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 require("dotenv").config()
-//---------------------------------------------------------------------------
-// No usamos esta libreria, pero podemos usarla para decodificar el token
-//const jwt_decode = require("jwt-decode");
-//---------------------------------------------------------------------------
 
 // Función para firmar el token.
 const signToken =  (_id, email) => jwt.sign({_id, email}, process.env.JWT_CODE);
 
-// Middleware para rutas con autenticación requerida. --------------------------------------------------
-const validateToken = jwt.verify(signToken(), process.env.JWT_CODE, {expiresIn: "1d"});
-
-const findAndAssingUser = async (req, res) => {
-    try {
-        const user = await Users.findById(req.user._id);
-        if (!user) return res.status(401).end();
-        req.user = user
-        next();
-    } catch (error) {
-        next(error);    
-    }
-};
-
-const isAuthenticated = express.Router().use(validateToken, findAndAssingUser);
-// -----------------------------------------------------------------------------------------------------
-
-
 const createUser = async (req, res) => {
-    const { body } = req
+    const { body } = req; //username, email, password, claveAcceso
     try {
-        const isUser = await Users.findOne({username: body.username});
-        if (isUser) {
-            return res.status(403).send("El nombre de usuario ya existe en la base de datos.");
-        }
+        const nombreEnMayusculas = body.username.toUpperCase()
+        const emailEnMinusculas = body.email.toLowerCase();
         const isEmail = await Users.findOne({email: body.email});
         if (isEmail) {
             return res.status(403).send("El email ingresado pertenece a un usuario ya registrado.");
         }
-
+        const listaAdmins = await Admins.find();
+        const listaFiltrada = listaAdmins.filter(objetoPrincipal =>
+            objetoPrincipal.usuariosHabilitados.some(usuario => usuario.email === emailEnMinusculas)
+        );
+        if (listaFiltrada.length === 0 || listaFiltrada.length >= 2) {
+            return res.status(403).send("Error con el filtro del admin.");
+        }
+        const admin = listaFiltrada[0];
+        const usuariosHabilitadosAdmin = [...admin.usuariosHabilitados];
+        const usuarioHabilitado = usuariosHabilitadosAdmin.filter((usuario) => usuario.claveAcceso === body.claveAcceso);
+        if (usuarioHabilitado.length === 0) {
+            return res.status(403).send("No hay usuarios habilitados para la clave de acceso ingresada.");
+        }
+        if (usuarioHabilitado.length >= 2) {
+            return res.status(403).send("Error: HAY MÁS DE 1 USUARIO HABILITADO CON LA MISMA CLAVE DE ACCESO.");
+        }
+        if (usuarioHabilitado[0].username !== nombreEnMayusculas) {
+            return res.status(403).send("La clave de acceso no corresponde al nombre de usuario ingresado.");
+        }
         const salt = await bcrypt.genSalt();
         const hashed = await bcrypt.hash(body.password, salt);
-
         const user = await Users.create({
-            username: body.username,
-            email: body.email,
+            username: nombreEnMayusculas,
+            email: emailEnMinusculas,
+            admin: admin._id,
+            bloqueado: false,
             password: hashed, salt
         });
-
         const msj = "Usuario creado exitosamente.";
-        res.status(201).send({user, msj});
-
+        return res.status(201).send({msj, user});
     } catch (error) {
-        console.log(error);
-        res.status(500).send(error.message);
+        return res.status(500).send(error.message);
     }
 };
 
 const loginUser = async (req, res) => {
-    const { body } = req
+    const { body } = req; //Email, password
     try {
-        const user = await Users.findOne({email:body.email});
+        const emailEnMinusculas = body.email.toLowerCase();
+        const user = await Users.findOne({email: emailEnMinusculas});
         if (!user) {
-            res.status(403).send("El email y/o la contraseña son incorrectos.");
-        } else {
-            const isMatch = await bcrypt.compare(body.password, user.password);
-            if (isMatch) {
-                const token = signToken(user._id, user.email);
-                res.status(200).send({token, user});
-            } else {
-                res.status(403).send("El email y/o la contraseña son incorrectos.");
-            }
+            return res.status(403).send("El email y/o la contraseña son incorrectos.");
+        } 
+        if (user.bloqueado === true) {
+            return res.status(403).send("El usuario se encuentra bloqueado.");
         }
+        const isMatch = await bcrypt.compare(body.password, user.password);
+        if (!isMatch) {
+            return res.status(403).send("El email y/o la contraseña son incorrectos.");
+        } 
+        const token = signToken(user._id, user.email);
+        return res.status(200).send({ token, user });
     } catch (error) {
-        console.log(error);
-        res.status(500).send(error.message);
+        return res.status(500).send(error.message);
     }
 };
 
 const updateUser = async (req, res) => {
-    const { body } = req
-    
-    const { email } = jwt.decode(body.token, {complete: true}).payload;
-    
-    // Decodificar token con otra libreria 
-    //const decoded = jwt_decode(body.token)
-    
-    const userFind = await Users.findOne({email: body.email});
-
-    if (email !== body.email || !userFind) return res.status(403).send("Correo inválido.");
-
-    const salt = await bcrypt.genSalt();
-    const hashed = await bcrypt.hash(body.password, salt);
-
-    const user = await Users.updateOne({email: body.email}, 
-        {
-            $set: {
-                password: hashed, salt
+    const { body } = req; //email, passwordActual, nuevaPassword
+    try {
+        const token = req.header("Authorization");
+        if (!token) {
+            return res.status(403).send('No se detecto un token en la petición.')
+        }
+        const emailEnMinusculas = body.email.toLowerCase();
+        const { email } = jwt.decode(token, {complete: true}).payload;
+        const user = await Users.findOne({email: emailEnMinusculas});
+        if (email !== emailEnMinusculas || !user) return res.status(403).send("Correo inválido.");
+        const isMatch = await bcrypt.compare(body.passwordActual, user.password);
+        if (!isMatch) {
+            return res.status(403).send("Contraseña actual inválida.");
+        }
+        const salt = await bcrypt.genSalt();
+        const hashed = await bcrypt.hash(body.nuevaPassword, salt);
+        await Users.updateOne({email: email}, 
+            {
+                $set: {
+                    password: hashed, salt
+                }
             }
-        })
-        console.log(user);
-        res.status(201).send("La contraseña ha sido modificada exitosamente.");
-};
+        )
+        return res.status(201).send("La contraseña ha sido modificada exitosamente.");
+    } catch (error) {
+        return res.status(500).send(error.message);
+    }
+}
 
-const usersList = async (req, res) => {
-    const users = await Users.find();
-    res.status(200).send(users);
-};
-
-
-module.exports = {createUser, loginUser, updateUser, usersList, isAuthenticated};
+module.exports = { createUser, loginUser, updateUser };
