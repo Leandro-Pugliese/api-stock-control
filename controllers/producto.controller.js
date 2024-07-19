@@ -177,6 +177,28 @@ const updateProductoComponentes = async(req, res) => {
     }
 }
 
+const updateProductoCategoria = async(req, res) => {
+    const {body} = req; //sku, categoria(String), descripcion(String)
+    try {
+        const skuEnMayusculas = body.sku.toUpperCase();
+        const producto = await Productos.findOne({sku: skuEnMayusculas});
+        if (!producto) {
+            return res.status(403).send("Producto no encontrado en la base de datos.");
+        }
+        await Productos.updateOne({sku: skuEnMayusculas},
+            {
+                $set: {
+                    categoria: body.categoria,
+                    descripcion: body.descripcion
+                }
+            }
+        );
+        return res.status(200).send("Producto modificado exitosamente.");
+    } catch (error) {
+        return res.status(500).send(error.message);
+    }
+} 
+
 const listaProductosAll = async(req, res) => {
     try {
         const productos = await Productos.find();
@@ -313,4 +335,4 @@ const listaProductosAll = async(req, res) => {
 //     }
 // };
 
-module.exports = {createProducto, updateProductoStock, updateProductoComponentes, listaProductosAll};
+module.exports = {createProducto, updateProductoStock, updateProductoComponentes, updateProductoCategoria, listaProductosAll};
