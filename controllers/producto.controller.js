@@ -58,7 +58,7 @@ const updateProductoStock = async(req, res) => { //Sirve tanto para modificar ca
         } else if (body.operacion === "REMOVE") {
             // Buscamos el si el color existe o no.
             if (filtroPorColor.length === 0) { // Si no existe no puedo modificarlo por ende error.
-                return res.status(403).send("Error: no se encontró el color indicado en el stock del producto.");
+                return res.status(403).send("No se encontró el color indicado en el stock del producto.");
             }
             else if (filtroPorColor.length === 1) { //Si existe (si queda en 0 lo dejamos cargado igual no eliminamos el color de la base de datos).
                 // Revisamos que no quede negativo el stock y modificamos cantidades.
@@ -208,6 +208,20 @@ const listaProductosAll = async(req, res) => {
     }
 };
 
+const productoData = async(req, res) => {
+    const {body} = req; //sku
+    try {
+        const skuEnMayusculas = body.sku.toUpperCase();
+        const producto = await Productos.findOne({sku: skuEnMayusculas});
+        if (!producto) {
+            return res.status(403).send("Producto no encontrado en la base de datos.");
+        }
+        return res.status(200).send(producto);
+    } catch (error) {
+        return res.status(500).send(error.message);
+    }
+} 
+
 // Por el momento vamos a filtrar en el front solamente.
 // const listaProductosFiltrados = async(req, res) => {
 //     const { body } = req 
@@ -335,4 +349,4 @@ const listaProductosAll = async(req, res) => {
 //     }
 // };
 
-module.exports = {createProducto, updateProductoStock, updateProductoComponentes, updateProductoCategoria, listaProductosAll};
+module.exports = {createProducto, updateProductoStock, updateProductoComponentes, updateProductoCategoria, listaProductosAll, productoData};

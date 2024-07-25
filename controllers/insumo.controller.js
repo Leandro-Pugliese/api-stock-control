@@ -49,5 +49,18 @@ const listaInsumos = async(req, res) => {
     }
 };
 
-module.exports = {createInsumo, updateInsumo, listaInsumos};
+const insumoData = async(req, res) => {
+    const {body} = req; //_id
+    try {
+        const insumo = await Insumos.findOne({_id: body._id});
+        if (!insumo) {
+            return res.status(403).send("Insumo no encontrado en la base de datos.");
+        }
+        return res.status(200).send(insumo);
+    } catch (error) {
+        return res.status(500).send(error.message);
+    }
+} 
+
+module.exports = {createInsumo, updateInsumo, listaInsumos, insumoData};
 
