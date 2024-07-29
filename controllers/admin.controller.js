@@ -274,7 +274,7 @@ const bloquearUsuario = async (req, res) => {
 }
 
 const borrarUsuario = async (req, res) => {
-    const {body} = req; //usuarioID, passwordAdmin, pin
+    const {body} = req; //usuarioEmail, passwordAdmin, pin
     try {
         const tokenAdmin = req.header("Authorization");
         if (!tokenAdmin) {
@@ -293,12 +293,15 @@ const borrarUsuario = async (req, res) => {
         if (!passwordMatch) {
             return res.status(403).send("Contraseña inválida.");
         }
-        const user = await Users.findOne({_id: body.usuarioID});
+        const user = await Users.findOne({email: body.usuarioEmail});
         if (!user) {
             return res.status(403).send('Usuario no encontrado en la base de datos.');
         }
         if (admin._id.toString() !== user.admin) {
             return res.status(403).send('Solo puedes borrar usuarios que hayas habilitado con este usuario administrador.');
+        }
+        if (user.bloqueado === false) {
+            return res.status(403).send('Para borrar un usuario primero tienes que bloquearlo.');
         }
         await Users.deleteOne({ _id: user._id });
         return res.status(200).send(`Usuario (${user.username}) eliminado exitosamente.`);
