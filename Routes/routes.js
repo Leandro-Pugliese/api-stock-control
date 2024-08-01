@@ -6,7 +6,6 @@ const {createUser, loginUser, updateUser} = require("../controllers/user.control
 const {createProducto, updateProductoStock, updateProductoComponentes, updateProductoCategoria, listaProductosAll, productoData} = require("../controllers/producto.controller");
 const {createInsumo, updateInsumo, listaInsumos, insumoData} = require("../controllers/insumo.controller");
 
-
 // Rutas Admin.
 router.post("/admin/crear", createAdmin);
 router.post("/admin/login", loginAdmin);
