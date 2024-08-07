@@ -15,7 +15,7 @@ const createProducto = async(req, res) => {
             categoria: body.categoria,
             descripcion: body.descripcion
         });
-        const msj = "Producto creado exitosamente."
+        const msj = "Producto cargado exitosamente."
         return res.status(201).send({producto, msj});
     } catch (error) {
         return res.status(500).send(error.message);
