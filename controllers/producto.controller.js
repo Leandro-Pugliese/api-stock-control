@@ -133,15 +133,16 @@ const updateProductoComponentes = async(req, res) => {
         } else if (body.operacion === "REMOVE") {
             // Buscamos el si el componente existe o no.
             if (filtroPorComponente.length === 0) { // Si no existe no puedo modificarlo por ende error.
-                return res.status(403).send("Error: no se encontró el insumo indicado en los componentes del producto.");
+                return res.status(403).send("No se encontró el insumo indicado en los componentes del producto.");
             }
             else if (filtroPorComponente.length === 1) { //Si existe.
                 // Revisamos que no quede negativo el stock y modificamos cantidades.
                 const resta = filtroPorComponente[0].cantidad - body.cantidad;
-                if (resta >= 1) {
+                let redondeoResta = parseFloat(resta.toFixed(2));
+                if (redondeoResta >= 0.01) {
                     const objetoComponenteModificado = {
                         insumo: filtroPorComponente[0].insumo,
-                        cantidad: resta
+                        cantidad: redondeoResta
                     }
                     for (let indice in componentesProducto){
                         let objOriginal = componentesProducto[indice];
