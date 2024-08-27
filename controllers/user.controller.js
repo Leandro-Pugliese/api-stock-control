@@ -3,7 +3,9 @@ const Admins = require("../models/adminUser");
 const Users = require("../models/User");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-require("dotenv").config()
+require("dotenv").config();
+const { Resend } = require("resend");
+const resend = new Resend(process.env.RESEND);
 
 // Función para firmar el token.
 const signToken =  (_id, email) => jwt.sign({_id, email}, process.env.JWT_CODE);
@@ -104,4 +106,71 @@ const updateUser = async (req, res) => {
     }
 }
 
-module.exports = { createUser, loginUser, updateUser };
+const recuperarPass = async (req, res) => {
+    const { body } = req; //email
+    try {
+        const emailEnMinusculas = body.email.toLowerCase();
+        const user = await Users.findOne({email: emailEnMinusculas});
+        if (!user) {
+            return res.status(403).send("El email ingresado no pertenece a un usuario registrado en la base de datos.");
+        } 
+        const payload = {
+            id:user._id
+        }
+        const nuevoToken = jwt.sign(payload, process.env.JWT_CODE, {expiresIn: '10m'});
+        const link = `${user._id}/${nuevoToken}`;
+        const { error } = await resend.emails.send({
+            from: 'Stock Control <soporteStockControl@leandro-pugliese.com>',
+            to: [emailEnMinusculas],
+            subject: 'Restablecer contraseña Stock Control',
+            html: ` <p>Ingresa en el siguiente link para recuperar la contraseña: <a href="http://localhost:3000/recuperar-pass/${link}">Click Aqui</a></p>
+                    <br><p>¡Si no pediste el recupero de la contraseña ignora este email y avisa al staff lo antes posbile!</p>`,
+        });
+        if (error) {
+            return res.status(403).send(error);
+        }
+        return res.status(200).send("Enviamos un link a tu email para que puedas recuperar la contraseña.")
+    } catch (err) {
+        return res.status(500).send(err.message);
+    }
+}
+
+const generarPass = async (req, res) => {
+    const { id, token} = req.params
+    try {
+        const user = await Users.findOne({ _id: id })
+        if (!user) {
+            return res.status(403).send("Credenciales inválidas");
+        }
+        const newPassword = Math.random().toString(36).replace(/[^a-z]+/g, '')
+        jwt.verify(token, process.env.JWT_CODE);
+        const salt = await bcrypt.genSalt()
+        const hashed = await bcrypt.hash(newPassword, salt)
+        await Users.updateOne({ _id: id },
+            {
+                $set: {
+                    password: hashed, salt
+                }
+            }
+        )
+        const { error } = await resend.emails.send({
+            from: 'Stock Control <soporteStockControl@leandro-pugliese.com>',
+            to: [user.email],
+            subject: 'Contraseña restaurada.',
+            html: ` <b>Tu contraseña fue restablecida con éxito.</b>
+                    <br><p>Tu nueva contraseña es:<b> ${newPassword}</b></p>
+                    <br><b><a href="http://localhost:3000/login-usuario"> Click aqui para iniciar sesión </a></b>
+                    <br><p>Te recomendamos cambiar nuevamente tu contraseña una vez que ingreses a tu cuenta por cuestiones de seguridad.</p>
+                    <br><p>Te saluda atentamente el staff de Stock Control.</p>`
+        });
+        if (error) {
+            return res.status(403).send(error);
+        }
+        return res.status(200).send("Te enviamos un email con la nueva contraseña");
+    } catch (err) {
+        return res.status(500).send(err.message);
+    }
+}
+
+
+module.exports = { createUser, loginUser, updateUser, recuperarPass, generarPass };
