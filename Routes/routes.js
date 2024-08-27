@@ -1,8 +1,8 @@
 const express = require("express");
 const router =  express.Router();
 const {isAuthenticated, isAuthenticatedAdmin} = require("../Authentication/authentication");
-const {createAdmin, loginAdmin, habilitarUsuario, quitarUsuarioHabilitado, updateAdmin, usersList, bloquearUsuario, borrarUsuario} = require("../controllers/admin.controller");
-const {createUser, loginUser, updateUser} = require("../controllers/user.controller");
+const {createAdmin, loginAdmin, habilitarUsuario, quitarUsuarioHabilitado, updateAdmin, usersList, bloquearUsuario, borrarUsuario, recuperarPassword, generarPassword} = require("../controllers/admin.controller");
+const {createUser, loginUser, updateUser, recuperarPass, generarPass} = require("../controllers/user.controller");
 const {createProducto, updateProductoStock, updateProductoComponentes, updateProductoCategoria, listaProductosAll, productoData} = require("../controllers/producto.controller");
 const {createInsumo, updateInsumo, listaInsumos, insumoData} = require("../controllers/insumo.controller");
 
@@ -15,10 +15,14 @@ router.put("/admin/update", isAuthenticatedAdmin, updateAdmin);
 router.put("/admin/bloquear-usuario", isAuthenticatedAdmin, bloquearUsuario);
 router.post("/admin/borrar-usuario", isAuthenticatedAdmin, borrarUsuario);
 router.get("/usuarios", isAuthenticatedAdmin, usersList);
+router.post("/recuperar-password", recuperarPassword);
+router.get("/recuperar-password/:id/:token", generarPassword);
 // Rutas Usuario.
 router.post("/usuario/crear", createUser);
 router.post("/usuario/login", loginUser);
 router.put("/usuario/update", isAuthenticated, updateUser);
+router.post("/recuperar-pass", recuperarPass);
+router.get("/recuperar-pass/:id/:token", generarPass);
 // Rutas Productos.(Usuario)
 router.post("/producto/crear", isAuthenticated, createProducto);
 router.put("/producto/update-stock", isAuthenticated, updateProductoStock);
