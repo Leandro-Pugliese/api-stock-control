@@ -19,10 +19,6 @@ const adminSchema = new mongoose.Schema({
         type: [],
         require: true
     },
-    pin : {
-        type: String,
-        require: true
-    },
     password: {
         type: String,
         require: true

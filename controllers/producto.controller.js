@@ -3,17 +3,17 @@ const Productos = require("../models/Product");
 
 
 const createProducto = async(req, res) => {
-    const { body } = req; //Sku, stock[{obj}], componentes[{obj}], categoria, descripcion
+    const { sku, stock, componentes, categoria, descripcion } = req.body;
     try {
-        const skuEnMayusculas = body.sku.toUpperCase();
-        const checkSku = await Productos.findOne({sku: skuEnMayusculas});
-        if (checkSku) return res.status(403).send("¡Sku existente!");
+        const skuEnMayusculas = sku.toUpperCase();
+        const checkSku = await Productos.exist({sku: skuEnMayusculas});
+        if (checkSku) return res.status(403).send("Sku existente.");
         const producto = await Productos.create({
             sku: skuEnMayusculas,
-            stock: body.stock,
-            componentes: body.componentes,
-            categoria: body.categoria,
-            descripcion: body.descripcion
+            stock,
+            componentes,
+            categoria,
+            descripcion
         });
         const msj = "Producto cargado exitosamente."
         return res.status(201).send({producto, msj});
@@ -23,28 +23,28 @@ const createProducto = async(req, res) => {
 };
 
 const updateProductoStock = async(req, res) => { //Sirve tanto para modificar cantidades de stock como para agregar colores nuevos.
-    const { body } = req //sku, operacion("ADD"/"REMOVE"), color(string), cantidad(Number)
+    const { sku, operacion, color, cantidad } = req.body;
     try {
-        const skuEnMayusculas = body.sku.toUpperCase();
+        const skuEnMayusculas = sku.toUpperCase();
         const producto = await Productos.findOne({sku: skuEnMayusculas});
         if (!producto) {
             return res.status(403).send("Producto no encontrado en la base de datos.");
         }
         let productoStock = [...producto.stock];
         // Filtramos por el color.
-        const filtroPorColor = productoStock.filter((elemento) => elemento.color === body.color);
-        if (body.operacion === "ADD") {
-            // Buscamos si el color existe en el stock del o hay que añadirlo.
-            if (filtroPorColor.length === 0) { // Si no existe el color en el stock, creamos el obj nuevo y lo añadimos.
+        const filtroPorColor = productoStock.filter((elemento) => elemento.color === color);
+        if (operacion === "ADD") {
+            // Busco si el color existe en el stock o hay que añadirlo.
+            if (filtroPorColor.length === 0) {
                 const nuevoObjetoStock = {
-                    color: body.color,
-                    unidades: body.cantidad
+                    color: color,
+                    unidades: cantidad
                 }
                 productoStock.push(nuevoObjetoStock);
-            } else if (filtroPorColor.length === 1) { // Si existe, modificamos solo la cantidad.
+            } else if (filtroPorColor.length === 1) { // Si existe, modifico solo la cantidad.
                 const objetoStockModificado = {
                     color: filtroPorColor[0].color,
-                    unidades: filtroPorColor[0].unidades + body.cantidad
+                    unidades: filtroPorColor[0].unidades + cantidad
                 }
                 for (let indice in productoStock){
                     let objOriginal = productoStock[indice];
@@ -55,14 +55,14 @@ const updateProductoStock = async(req, res) => { //Sirve tanto para modificar ca
             } else {
                 return res.status(403).send("Error en el filtrado de color del producto.");
             }
-        } else if (body.operacion === "REMOVE") {
-            // Buscamos el si el color existe o no.
+        } else if (operacion === "REMOVE") {
+            // Busco si el color existe o no.
             if (filtroPorColor.length === 0) { // Si no existe no puedo modificarlo por ende error.
                 return res.status(403).send("No se encontró el color indicado en el stock del producto.");
             }
-            else if (filtroPorColor.length === 1) { //Si existe (si queda en 0 lo dejamos cargado igual no eliminamos el color de la base de datos).
-                // Revisamos que no quede negativo el stock y modificamos cantidades.
-                const resta = filtroPorColor[0].unidades - body.cantidad;
+            else if (filtroPorColor.length === 1) { //Si existe (si queda en 0 lo dejo cargado igual no elimino el color de la base de datos).
+                // Reviso que no quede negativo el stock y modifico cantidades.
+                const resta = filtroPorColor[0].unidades - cantidad;
                 if (resta >= 0) {
                     const objetoStockModificado = {
                         color: filtroPorColor[0].color,
@@ -98,28 +98,28 @@ const updateProductoStock = async(req, res) => { //Sirve tanto para modificar ca
 };
 
 const updateProductoComponentes = async(req, res) => {
-    const {body} = req; //sku, operacion("ADD"/"REMOVE"), insumo(String), Cantidad(Number)
+    const {sku, operacion, insumo, cantidad} = req.body;
     try {
-        const skuEnMayusculas = body.sku.toUpperCase();
+        const skuEnMayusculas = sku.toUpperCase();
         const producto = await Productos.findOne({sku: skuEnMayusculas});
         if (!producto) {
             return res.status(403).send("Producto no encontrado en la base de datos.");
         }
         let componentesProducto = [...producto.componentes];
-        // Filtramos por componente.
-        const filtroPorComponente = componentesProducto.filter((elemento) => elemento.insumo === body.insumo);
-        if (body.operacion === "ADD") {
-            // Buscamos si el componente existe o hay que añadirlo.
-            if (filtroPorComponente.length === 0) { // Si no existe el componente, creamos el obj nuevo y lo añadimos.
+        // Filtro por componente.
+        const filtroPorComponente = componentesProducto.filter((elemento) => elemento.insumo === insumo);
+        if (operacion === "ADD") {
+            // Busco si el componente existe o hay que añadirlo.
+            if (filtroPorComponente.length === 0) { 
                 const nuevoObjetoComponente = {
-                    insumo: body.insumo,
-                    cantidad: body.cantidad
+                    insumo: insumo,
+                    cantidad: cantidad
                 }
                 componentesProducto.push(nuevoObjetoComponente);
-            } else if (filtroPorComponente.length === 1) { // Si existe, modificamos solo la cantidad.
+            } else if (filtroPorComponente.length === 1) { // Si existe, modifico solo la cantidad.
                 const objetoComponenteModificado = {
                     insumo: filtroPorComponente[0].insumo,
-                    cantidad: filtroPorComponente[0].cantidad + body.cantidad
+                    cantidad: filtroPorComponente[0].cantidad + cantidad
                 }
                 for (let indice in componentesProducto){
                     let objOriginal = componentesProducto[indice];
@@ -130,14 +130,14 @@ const updateProductoComponentes = async(req, res) => {
             } else {
                 return res.status(403).send("Error en el filtrado de componente del producto.");
             }
-        } else if (body.operacion === "REMOVE") {
-            // Buscamos el si el componente existe o no.
-            if (filtroPorComponente.length === 0) { // Si no existe no puedo modificarlo por ende error.
+        } else if (operacion === "REMOVE") {
+            // Busco el si el componente existe o no.
+            if (filtroPorComponente.length === 0) {
                 return res.status(403).send("No se encontró el insumo indicado en los componentes del producto.");
             }
             else if (filtroPorComponente.length === 1) { //Si existe.
-                // Revisamos que no quede negativo el stock y modificamos cantidades.
-                const resta = filtroPorComponente[0].cantidad - body.cantidad;
+                // Reviso que no quede negativo el stock y modifico cantidades.
+                const resta = filtroPorComponente[0].cantidad - cantidad;
                 let redondeoResta = parseFloat(resta.toFixed(2));
                 if (redondeoResta >= 0.01) {
                     const objetoComponenteModificado = {
@@ -150,10 +150,10 @@ const updateProductoComponentes = async(req, res) => {
                             componentesProducto.splice(indice, 1, objetoComponenteModificado);
                         }
                     }
-                } else { //En este caso solo quitamos el componente del array de componentes.
+                } else { //En este caso solo quito el componente del array de componentes.
                     for (let indice in componentesProducto){
                         let objOriginal = componentesProducto[indice];
-                        if (objOriginal.insumo === body.insumo) {
+                        if (objOriginal.insumo === insumo) {
                             componentesProducto.splice(indice, 1);
                         }
                     }
@@ -179,18 +179,18 @@ const updateProductoComponentes = async(req, res) => {
 }
 
 const updateProductoCategoria = async(req, res) => {
-    const {body} = req; //sku, categoria(String), descripcion(String)
+    const {sku, categoria, descripcion} = req.body;
     try {
-        const skuEnMayusculas = body.sku.toUpperCase();
-        const producto = await Productos.findOne({sku: skuEnMayusculas});
+        const skuEnMayusculas = sku.toUpperCase();
+        const producto = await Productos.exists({sku: skuEnMayusculas});
         if (!producto) {
             return res.status(403).send("Producto no encontrado en la base de datos.");
         }
         await Productos.updateOne({sku: skuEnMayusculas},
             {
                 $set: {
-                    categoria: body.categoria,
-                    descripcion: body.descripcion
+                    categoria,
+                    descripcion
                 }
             }
         );
@@ -210,9 +210,9 @@ const listaProductosAll = async(req, res) => {
 };
 
 const productoData = async(req, res) => {
-    const {body} = req; //sku
+    const {sku} = req.body;
     try {
-        const skuEnMayusculas = body.sku.toUpperCase();
+        const skuEnMayusculas = sku.toUpperCase();
         const producto = await Productos.findOne({sku: skuEnMayusculas});
         if (!producto) {
             return res.status(403).send("Producto no encontrado en la base de datos.");

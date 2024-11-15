@@ -39,14 +39,14 @@ router.get("/productos-admin", isAuthenticatedAdmin, listaProductosAll);
 router.post("/producto-admin", isAuthenticatedAdmin, productoData);
 // Rutas Insumos.(Usuario)
 router.post("/insumo/crear", isAuthenticated, createInsumo);
-router.put("/insumo/update", isAuthenticated, updateInsumo);
+router.put("/insumo/update/:id", isAuthenticated, updateInsumo);
 router.get("/insumos", isAuthenticated, listaInsumos);
-router.post("/insumo", isAuthenticated, insumoData);
+router.post("/insumo/:id", isAuthenticated, insumoData);
 // Rutas Insumos.(Admin)
 router.post("/insumo/crear-admin", isAuthenticatedAdmin, createInsumo);
-router.put("/insumo/update-admin", isAuthenticatedAdmin, updateInsumo);
+router.put("/insumo/update-admin/:id", isAuthenticatedAdmin, updateInsumo);
 router.get("/insumos-admin", isAuthenticatedAdmin ,listaInsumos);
-router.post("/insumo-admin", isAuthenticatedAdmin, insumoData);
+router.post("/insumo-admin/:id", isAuthenticatedAdmin, insumoData);
 
 module.exports = router
 

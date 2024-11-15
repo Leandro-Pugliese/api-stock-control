@@ -2,35 +2,38 @@ const express = require("express");
 const Insumos = require("../models/Insumo");
 
 const createInsumo = async(req, res) => {
-    const { body } = req; //nombre, precio, descripcion
+    const { nombre, precio, descripcion } = req.body;
     try {
-        const nombreEnMayusculas = body.nombre.toUpperCase()
-        const checkInsumo = await Insumos.findOne({nombre: nombreEnMayusculas});
-        if (checkInsumo) return res.status(403).send("¡Insumo existente!");
+        const nombreEnMayusculas = nombre.toUpperCase();
+        const checkInsumo = await Insumos.exists({nombre: nombreEnMayusculas});
+        if (checkInsumo) {
+            return res.status(403).send("¡Insumo existente!");
+        }
         const insumo = await Insumos.create({
             nombre: nombreEnMayusculas,
-            precio: body.precio,
-            descripcion: body.descripcion
+            precio,
+            descripcion
         });
         const msj = "Insumo cargado exitosamente."
-        return res.status(201).send({insumo, msj});
+        return res.status(200).send({insumo, msj});
     } catch (error) {
         return res.status(500).send(error.message);
     }
 };
 
 const updateInsumo = async(req, res) => {
-    const { body } = req; //_id, precio, descripcion.
+    const {id} = req.params;
+    const { precio, descripcion } = req.body;
     try {
-        const checkInsumo = await Insumos.findOne({_id: body._id});
+        const checkInsumo = await Insumos.exists({_id: id});
         if (!checkInsumo) {
-            return res.status(403).send("¡Insumo no encontrado en la base de datos!")
+            return res.status(403).send("Insumo no encontrado en la base de datos.")
         };
-        await Insumos.updateOne({_id: body._id},
+        await Insumos.updateOne({_id: id},
             {
                 $set: {
-                    precio: body.precio,
-                    descripcion: body.descripcion
+                    precio,
+                    descripcion
                 }
             }     
         );
@@ -50,9 +53,9 @@ const listaInsumos = async(req, res) => {
 };
 
 const insumoData = async(req, res) => {
-    const {body} = req; //_id
+    const {id} = req.params;
     try {
-        const insumo = await Insumos.findOne({_id: body._id});
+        const insumo = await Insumos.findOne({_id: id});
         if (!insumo) {
             return res.status(403).send("Insumo no encontrado en la base de datos.");
         }
